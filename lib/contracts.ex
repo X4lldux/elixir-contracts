@@ -26,7 +26,7 @@ defmodule Contracts do
     end
   end
 
-  def on_definition(env, kind, name, args, guards, body) when kind in [:def, :defp] do
+  def __on_definition__(env, kind, name, args, guards, body) when kind in [:def, :defp] do
     mod = env.module
     precond  = Module.get_attribute(mod, :requires)
     postcond = Module.get_attribute(mod, :ensures)
