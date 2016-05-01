@@ -1,4 +1,4 @@
-defmodule Contracts.Mixfile do
+defmodule ExContracts.Mixfile do
   use Mix.Project
 
   def project do

@@ -49,7 +49,7 @@ defmodule TestB do
   def test_require_ensure_with_guard(a, b) when true, do: IO.inspect b
 end
 
-defmodule ContractsTest do
+defmodule ExContractsTest do
   use ExUnit.Case
   import ExUnit.CaptureIO
 
