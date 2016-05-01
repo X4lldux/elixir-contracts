@@ -1,16 +1,16 @@
-defmodule Contracts do
+defmodule ExContracts do
   defmodule Contract do
     defstruct precondition: nil, postcondition: nil, func_name: nil, func_args: nil, func_guards: nil, func_body: nil
   end
 
   defmacro __using__(_opts) do
     quote do
-      import Contracts
+      import ExContracts
 
       Module.register_attribute(__MODULE__, :contract_predicates, accumulate: true, persist: true)
 
-      @before_compile Contracts
-      @on_definition  Contracts
+      @before_compile ExContracts
+      @on_definition  ExContracts
     end
   end
 

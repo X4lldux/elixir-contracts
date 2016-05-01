@@ -4,7 +4,7 @@ defmodule ContractsTest do
   defmodule Tank do
     defstruct level: 0, max_level: 10, in_valve: :closed, out_valve: :closed
 
-    use Contracts
+    use ExContracts
 
     @require contract not full?(tank) && tank.in_valve == :open && tank.out_valve == :closed
     @ensure  contract full?(result) && result.in_valve == :closed && result.out_valve == :closed
