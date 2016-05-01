@@ -6,14 +6,14 @@ defmodule ContractsTest do
 
     use Contracts
 
-    @requires contract not full?(tank) && tank.in_valve == :open && tank.out_valve == :closed
-    @ensures  contract full?(result) && result.in_valve == :closed && result.out_valve == :closed
+    @require contract not full?(tank) && tank.in_valve == :open && tank.out_valve == :closed
+    @ensure  contract full?(result) && result.in_valve == :closed && result.out_valve == :closed
     def fill(tank) do
       %Tank{tank | level: 10, in_valve: :closed}
     end
 
-    @requires contract tank.in_valve == :closed && tank.out_valve == :open
-    @ensures  contract empty?(result) && result.in_valve == :closed && result.out_valve == :closed
+    @require contract tank.in_valve == :closed && tank.out_valve == :open
+    @ensure  contract empty?(result) && result.in_valve == :closed && result.out_valve == :closed
     def empty(tank) do
       %Tank{tank | level: 1, out_valve: :closed}
       # %Tank{tank | level: 0, out_valve: :closed}

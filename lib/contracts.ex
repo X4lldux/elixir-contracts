@@ -28,8 +28,8 @@ defmodule Contracts do
 
   def __on_definition__(env, kind, name, args, guards, body) when kind in [:def, :defp] do
     mod = env.module
-    precond  = Module.get_attribute(mod, :requires)
-    postcond = Module.get_attribute(mod, :ensures)
+    precond  = Module.get_attribute(mod, :require)
+    postcond = Module.get_attribute(mod, :ensure)
 
     contract = %Contract{
       func_name:   name,
@@ -40,11 +40,11 @@ defmodule Contracts do
 
     if precond do
       contract = %{ contract | precondition: precond}
-      Module.delete_attribute(mod, :requires)
+      Module.delete_attribute(mod, :require)
     end
     if postcond do
       contract = %{ contract | postcondition: postcond}
-      Module.delete_attribute(mod, :ensures)
+      Module.delete_attribute(mod, :ensure)
     end
 
     if precond || postcond do
@@ -87,13 +87,13 @@ defmodule Contracts do
     Macro.escape(predicate)
   end
 
-  # defmacro requires(predicate) do
+  # defmacro require(predicate) do
   #   mod = __CALLER__.module
-  #   Module.put_attribute(mod, :requires, predicate)
+  #   Module.put_attribute(mod, :require, predicate)
   # end
 
-  # defmacro ensures(predicate) do
+  # defmacro ensure(predicate) do
   #   mod = __CALLER__.module
-  #   Module.put_attribute(mod, :ensures, predicate)
+  #   Module.put_attribute(mod, :ensure, predicate)
   # end
 end
