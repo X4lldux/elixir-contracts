@@ -1,6 +1,6 @@
 defmodule ExContracts do
   defmodule Contract do
-    defstruct precondition: nil, postcondition: nil, func_name: nil, func_args: nil, func_guards: nil, func_body: nil
+    defstruct precondition: nil, postcondition: nil, on_broken_contract: :raise, func_name: nil, func_args: nil, func_guards: nil, func_body: nil
   end
 
   defmacro __using__(_opts) do
@@ -10,6 +10,7 @@ defmodule ExContracts do
       Module.register_attribute(__MODULE__, :contract_predicates, accumulate: true, persist: true)
 
       @contracts_compile_time_purge Application.get_env :excontracts, :compile_time_purge, false
+      @on_broken_contracts :raise
       @before_compile ExContracts
       @on_definition  ExContracts
     end
@@ -32,14 +33,26 @@ defmodule ExContracts do
     if(Module.get_attribute(mod, :contracts_compile_time_purge) == false) do
       precond  = Module.get_attribute(mod, :require)
       postcond = Module.get_attribute(mod, :ensure)
+      on_broken_contract = case Module.get_attribute(mod, :on_broken_contract) do
+                             nil -> Module.get_attribute(mod, :on_broken_contracts)
+                             val -> val
+                           end
+                           |> case do
+                                val when val in [:raise, :error_tuple] -> val
+                                _ ->
+                                  raise CompileError, file: env.file, line: env.line,
+                                    description: "unknown value in @on_broken_contract/@on_broken_contracts attribute"
+                           end
 
       contract = %Contract{
-        func_name:   name,
-        func_args:   args,
-        func_guards: guards,
-        func_body:   body,
+        on_broken_contract: on_broken_contract,
+        func_name:          name,
+        func_args:          args,
+        func_guards:        guards,
+        func_body:          body,
       }
 
+      Module.delete_attribute(mod, :on_broken_contract)
       if precond do
         contract = %{ contract | precondition: precond}
         Module.delete_attribute(mod, :require)
@@ -62,14 +75,32 @@ defmodule ExContracts do
     Module.make_overridable(mod, [{contract.func_name, contract.func_args |> length}])
 
     body = quote do
-      unless unquote(contract.precondition), do: raise "Precondition not met: blame the client"
-      var!(result) = unquote(contract.func_body)
-      unless unquote(contract.postcondition), do: raise "Postcondition not met: blame yourself"
+      if unquote(contract.precondition) do
+        var!(result) = unquote(contract.func_body)
 
-      var!(result)
+        if unquote(contract.postcondition) do
+          var!(result)
+
+        else
+          case unquote(contract.on_broken_contract) do
+            :raise       ->
+              raise ContractPostcondError,
+                mfa: {unquote(mod), unquote(contract.func_name), unquote(contract.func_args |> length)}
+            :error_tuple -> {:error, :contract_postcondition_not_met}
+          end
+        end
+
+      else
+        case unquote(contract.on_broken_contract) do
+          :raise       ->
+            raise ContractPrecondError,
+              mfa: {unquote(mod), unquote(contract.func_name), unquote(contract.func_args |> length)}
+          :error_tuple -> {:error, :contract_precondition_not_met}
+        end
+      end
     end
 
-    if contract.func_guards |> length > 0 do
+    if has_gaurds? contract do
       quote do
         def unquote(contract.func_name)(unquote_splicing(contract.func_args)) when unquote_splicing(contract.func_guards) do
           unquote(body)
@@ -88,6 +119,10 @@ defmodule ExContracts do
   defmacro contract(predicate) do
     Macro.escape(predicate)
   end
+
+  defp has_gaurds?(%Contract{func_guards: nil}), do: false
+  defp has_gaurds?(%Contract{func_guards: []}), do: false
+  defp has_gaurds?(%Contract{func_guards: _}), do: true
 
   # defmacro require(predicate) do
   #   mod = __CALLER__.module
