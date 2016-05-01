@@ -3,8 +3,10 @@ defmodule Contracts.Mixfile do
 
   def project do
     [app: :excontracts,
-     version: "0.0.1",
-     elixir: "~> 1.0",
+     version: "0.2.0",
+     package: package,
+     description: "Provides support for Design by Contract technique Elixir."
+     elixir: "~> 1.2",
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
      deps: deps]
@@ -28,5 +30,11 @@ defmodule Contracts.Mixfile do
   # Type `mix help deps` for more examples and options
   defp deps do
     []
+  end
+
+  defp package do
+    [ maintainers: ["X4lldux"],
+      licenses: ["MIT"],
+      links: %{"GitHub" => "https://github.com/X4lldux/elixir-contracts"} ]
   end
 end
