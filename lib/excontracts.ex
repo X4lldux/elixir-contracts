@@ -7,7 +7,7 @@ defmodule ExContracts do
     quote do
       import ExContracts
 
-      Module.register_attribute(__MODULE__, :contract_predicates, accumulate: true, persist: true)
+      Module.register_attribute(__MODULE__, :contracts_predicates, accumulate: true, persist: true)
 
       @contracts_compile_time_purge Application.get_env :excontracts, :compile_time_purge, false
       @on_broken_contracts :raise
@@ -18,7 +18,7 @@ defmodule ExContracts do
 
   defmacro __before_compile__(env) do
     mod = env.module
-    predicates = Module.get_attribute(mod, :contract_predicates) |> Enum.reverse
+    predicates = Module.get_attribute(mod, :contracts_predicates) |> Enum.reverse
 
     contract_funcs = predicates
     |> Enum.map(&build_contract_function(&1, env))
@@ -63,7 +63,7 @@ defmodule ExContracts do
       end
 
       if precond || postcond do
-        Module.put_attribute(mod, :contract_predicates, contract)
+        Module.put_attribute(mod, :contracts_predicates, contract)
       end
     end
     :ok
