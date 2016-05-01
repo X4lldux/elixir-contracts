@@ -9,7 +9,7 @@ Usage
 
 ```elixir
 defmodule Example do
-  use Contracts
+  use ExContracts
 
   @require x > 0
   @ensure (result * result) <= x && (result+1) * (result+1) > x
