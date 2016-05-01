@@ -9,6 +9,7 @@ defmodule ExContracts do
 
       Module.register_attribute(__MODULE__, :contract_predicates, accumulate: true, persist: true)
 
+      @contracts_compile_time_purge Application.get_env :excontracts, :compile_time_purge, false
       @before_compile ExContracts
       @on_definition  ExContracts
     end
@@ -28,29 +29,30 @@ defmodule ExContracts do
 
   def __on_definition__(env, kind, name, args, guards, body) when kind in [:def, :defp] do
     mod = env.module
-    precond  = Module.get_attribute(mod, :require)
-    postcond = Module.get_attribute(mod, :ensure)
+    if(Module.get_attribute(mod, :contracts_compile_time_purge) == false) do
+      precond  = Module.get_attribute(mod, :require)
+      postcond = Module.get_attribute(mod, :ensure)
 
-    contract = %Contract{
-      func_name:   name,
-      func_args:   args,
-      func_guards: guards,
-      func_body:   body,
-    }
+      contract = %Contract{
+        func_name:   name,
+        func_args:   args,
+        func_guards: guards,
+        func_body:   body,
+      }
 
-    if precond do
-      contract = %{ contract | precondition: precond}
-      Module.delete_attribute(mod, :require)
+      if precond do
+        contract = %{ contract | precondition: precond}
+        Module.delete_attribute(mod, :require)
+      end
+      if postcond do
+        contract = %{ contract | postcondition: postcond}
+        Module.delete_attribute(mod, :ensure)
+      end
+
+      if precond || postcond do
+        Module.put_attribute(mod, :contract_predicates, contract)
+      end
     end
-    if postcond do
-      contract = %{ contract | postcondition: postcond}
-      Module.delete_attribute(mod, :ensure)
-    end
-
-    if precond || postcond do
-      Module.put_attribute(mod, :contract_predicates, contract)
-    end
-
     :ok
   end
   def __on_definition__(_env, _kind, _name, _args, _gaurds, _body), do: :ok
