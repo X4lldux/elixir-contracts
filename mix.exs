@@ -5,7 +5,7 @@ defmodule Contracts.Mixfile do
     [app: :excontracts,
      version: "0.2.0",
      package: package,
-     description: "Provides support for Design by Contract technique Elixir."
+     description: "Provides support for Design by Contract technique Elixir.",
      elixir: "~> 1.2",
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
