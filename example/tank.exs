@@ -8,7 +8,6 @@ defmodule Tank do
   @ensure  contract full?(result) && result.in_valve == :closed && result.out_valve == :closed
   @on_broken_contract :error_tuple
   def fill(tank) do
-  def fill(tank) do
     %Tank{tank | level: 10, in_valve: :closed}
   end
 
