@@ -1,43 +1,135 @@
+defmodule TestA do
+  use ExContracts
+
+  @require contract IO.inspect(a)
+  def test_require(a, b), do: IO.inspect b
+
+  @ensure contract IO.inspect(a) && result
+  def test_ensure(a, b), do: IO.inspect b
+
+  @require contract IO.inspect(a)
+  @ensure contract IO.inspect(a) && result
+  def test_require_ensure(a, b), do: IO.inspect b
+
+
+  @require contract IO.inspect(a)
+  def test_require_with_guard(a, b) when true, do: IO.inspect b
+
+  @ensure contract IO.inspect(a) && result
+  def test_ensure_with_guard(a, b) when true, do: IO.inspect b
+
+  @require contract IO.inspect(a)
+  @ensure contract IO.inspect(a) && result
+  def test_require_ensure_with_guard(a, b) when true, do: IO.inspect b
+end
+
+defmodule TestB do
+  use ExContracts
+  @on_broken_contracts :error_tuple
+
+  @require contract IO.inspect(a)
+  def test_require(a, b), do: IO.inspect b
+
+  @ensure contract IO.inspect(a) && result
+  def test_ensure(a, b), do: IO.inspect b
+
+  @require contract IO.inspect(a)
+  @ensure contract IO.inspect(a) && result
+  def test_require_ensure(a, b), do: IO.inspect b
+
+
+  @require contract IO.inspect(a)
+  def test_require_with_guard(a, b) when true, do: IO.inspect b
+
+  @ensure contract IO.inspect(a) && result
+  def test_ensure_with_guard(a, b) when true, do: IO.inspect b
+
+  @require contract IO.inspect(a)
+  @ensure contract IO.inspect(a) && result
+  def test_require_ensure_with_guard(a, b) when true, do: IO.inspect b
+end
+
 defmodule ContractsTest do
   use ExUnit.Case
+  import ExUnit.CaptureIO
 
-  defmodule Tank do
-    defstruct level: 0, max_level: 10, in_valve: :closed, out_valve: :closed
+  test "`@require` contract is checked before function is run" do
+    assert capture_io(fn -> TestA.test_require(true, :ok) end) == "true\n:ok\n"
+    assert capture_io(fn -> TestA.test_require_with_guard(true, :ok) end) == "true\n:ok\n"
 
-    use ExContracts
-
-    @require contract not full?(tank) && tank.in_valve == :open && tank.out_valve == :closed
-    @ensure  contract full?(result) && result.in_valve == :closed && result.out_valve == :closed
-    def fill(tank) do
-      %Tank{tank | level: 10, in_valve: :closed}
-    end
-
-    @require contract tank.in_valve == :closed && tank.out_valve == :open
-    @ensure  contract empty?(result) && result.in_valve == :closed && result.out_valve == :closed
-    def empty(tank) do
-      %Tank{tank | level: 1, out_valve: :closed}
-      # %Tank{tank | level: 0, out_valve: :closed}
-    end
-
-    def full?(tank) do
-      tank.level == tank.max_level
-    end
-
-    def empty?(tank) do
-      tank.level == 0
-    end
+    assert Regex.match?(~r/^true\n:ok\n/,
+      capture_io(fn -> TestA.test_require_ensure(true, :ok) end))
+    assert Regex.match?(~r/^true\n:ok\n/,
+      capture_io(fn -> TestA.test_require_ensure_with_guard(true, :ok) end))
   end
 
-  test "fill/1 fills the tank with water" do
-    tank = %Tank{level: 10}
-    # tank = %Tank{level: 5, in_valve: :open}
-    tank = Tank.fill(tank)
-    assert Tank.full?(tank)
+  test "when `@require` contract fails, function was already run" do
+    assert capture_io(fn ->
+      try do
+        TestA.test_require(false, :ok)
+      rescue
+        _ -> nil
+      end
+    end) == "false\n"
+    assert capture_io(fn ->
+      try do
+        TestA.test_require_with_guard(false, :ok)
+      rescue
+        _ -> nil
+      end
+    end) == "false\n"
   end
 
-  test "empty/1 empties the tank" do
-    tank = %Tank{level: 10, out_valve: :open}
-    tank = Tank.empty(tank)
-    assert Tank.empty?(tank)
+  test "`@ensure` contract is checked after function is run" do
+    assert capture_io(fn -> TestA.test_ensure(true, :ok) end) == ":ok\ntrue\n"
+    assert capture_io(fn -> TestA.test_ensure_with_guard(true, :ok) end) == ":ok\ntrue\n"
+
+    assert Regex.match?(~r/:ok\ntrue\n$/,
+      capture_io(fn -> TestA.test_require_ensure(true, :ok) end))
+    assert Regex.match?(~r/:ok\ntrue\n$/,
+      capture_io(fn -> TestA.test_require_ensure_with_guard(true, :ok) end))
+  end
+
+  test "when `@ensure` contract fails, function was already run" do
+    assert capture_io(fn ->
+      try do
+        TestA.test_ensure(false, :ok)
+      rescue
+        _ -> nil
+      end
+    end) == ":ok\nfalse\n"
+    assert capture_io(fn ->
+      try do
+        TestA.test_ensure_with_guard(false, :ok)
+      rescue
+        _ -> nil
+      end
+    end) == ":ok\nfalse\n"
+
+    assert Regex.match?(~r/:ok\nfalse\n$/,
+      capture_io(fn ->
+        try do
+          TestA.test_ensure(false, :ok)
+        rescue
+          _ -> nil
+        end
+      end))
+    assert Regex.match?(~r/:ok\nfalse\n$/,
+      capture_io(fn ->
+        try do
+          TestA.test_ensure_with_guard(false, :ok)
+        rescue
+          _ -> nil
+        end
+      end))
+  end
+
+  test "when contract fails and @on_broken_contracts is set to `:error_tuple` tuple is returned" do
+    capture_io fn ->
+      assert TestB.test_require(false, :ok) == {:error, :contract_precondition_not_met}
+      assert TestB.test_require_with_guard(false, :ok) == {:error, :contract_precondition_not_met}
+      assert TestB.test_ensure(false, :ok) == {:error, :contract_postcondition_not_met}
+      assert TestB.test_ensure_with_guard(false, :ok) == {:error, :contract_postcondition_not_met}
+    end
   end
 end
