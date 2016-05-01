@@ -86,16 +86,7 @@ defmodule ExContracts do
     if(Module.get_attribute(mod, :contracts_compile_time_purge) == false) do
       precond  = Module.get_attribute(mod, :require)
       postcond = Module.get_attribute(mod, :ensure)
-      on_broken_contract = case Module.get_attribute(mod, :on_broken_contract) do
-                             nil -> Module.get_attribute(mod, :on_broken_contracts)
-                             val -> val
-                           end
-                           |> case do
-                                val when val in [:raise, :error_tuple] -> val
-                                _ ->
-                                  raise CompileError, file: env.file, line: env.line,
-                                    description: "unknown value in @on_broken_contract/@on_broken_contracts attribute"
-                           end
+      on_broken_contract = check_broken_contract_strategy(env)
 
       contract = %Contract{
         on_broken_contract: on_broken_contract,
@@ -123,35 +114,25 @@ defmodule ExContracts do
   end
   def __on_definition__(_env, _kind, _name, _args, _gaurds, _body), do: :ok
 
+  defp check_broken_contract_strategy(env) do
+    mod= env.module
+    strategy = case Module.get_attribute(mod, :on_broken_contract) do
+                 nil -> Module.get_attribute(mod, :on_broken_contracts)
+                 val -> val
+               end
+    case strategy do
+      val when val in [:raise, :error_tuple] -> val
+      _ ->
+        raise CompileError, file: env.file, line: env.line,
+          description: "unknown value in @on_broken_contract/@on_broken_contracts attribute"
+    end
+  end
+
   defp build_contract_function(%Contract{}=contract, env) do
     mod = env.module
     Module.make_overridable(mod, [{contract.func_name, contract.func_args |> length}])
 
-    body = quote do
-      if unquote(contract.precondition) do
-        var!(result) = unquote(contract.func_body)
-
-        if unquote(contract.postcondition) do
-          var!(result)
-
-        else
-          case unquote(contract.on_broken_contract) do
-            :raise       ->
-              raise ContractPostcondError,
-                mfa: {unquote(mod), unquote(contract.func_name), unquote(contract.func_args |> length)}
-            :error_tuple -> {:error, :contract_postcondition_not_met}
-          end
-        end
-
-      else
-        case unquote(contract.on_broken_contract) do
-          :raise       ->
-            raise ContractPrecondError,
-              mfa: {unquote(mod), unquote(contract.func_name), unquote(contract.func_args |> length)}
-          :error_tuple -> {:error, :contract_precondition_not_met}
-        end
-      end
-    end
+    body = build_contract_function_body(contract, env)
 
     if has_gaurds? contract do
       quote do
@@ -171,6 +152,51 @@ defmodule ExContracts do
 
   defmacro contract(predicate) do
     Macro.escape(predicate)
+  end
+
+  defp build_contract_function_body(contract, env) do
+    mod = env.module
+    body = quote do
+      var!(result) = unquote(contract.func_body)
+    end
+    body = case contract.postcondition do
+             nil -> body
+             _   ->
+               quote do
+                 unquote(body)
+
+                 if unquote(contract.postcondition) do
+                   var!(result)
+
+                 else
+                   case unquote(contract.on_broken_contract) do
+                     :raise       ->
+                       raise ContractPostcondError,
+                         mfa: {unquote(mod),
+                               unquote(contract.func_name),
+                               unquote(contract.func_args |> length)}
+                     :error_tuple -> {:error, :contract_postcondition_not_met}
+                   end
+                 end
+               end
+           end
+    body = case contract.precondition do
+             nil -> body
+             _   ->
+               quote do
+                 if unquote(contract.precondition) do
+                   unquote(body)
+                 else
+                   case unquote(contract.on_broken_contract) do
+                     :raise       ->
+                       raise ContractPrecondError,
+                         mfa: {unquote(mod), unquote(contract.func_name), unquote(contract.func_args |> length)}
+                     :error_tuple -> {:error, :contract_precondition_not_met}
+                   end
+                 end
+               end
+           end
+    body
   end
 
   defp has_gaurds?(%Contract{func_guards: nil}), do: false
