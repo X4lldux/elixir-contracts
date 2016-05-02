@@ -63,7 +63,7 @@ defmodule ExContractsTest do
       capture_io(fn -> TestA.test_require_ensure_with_guard(true, :ok) end))
   end
 
-  test "when `@require` contract fails, function was already run" do
+  test "when `@require` contract fails, function is not yet run" do
     assert capture_io(fn ->
       try do
         TestA.test_require(false, :ok)

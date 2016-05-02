@@ -36,7 +36,7 @@ checked after your function is executed and additionally to function arguments, 
 (which contains result of your function) to validate the contract.
 
 By default, when a contract is broken, an exception is raised. Either `ContractPrecondError` or `ContractPostcondError`.
-But by setting `@on_broken_contracts` (for per module setting) or `@on_broken_contract` (per function) to `:riase` or
+But by setting `@on_broken_contracts` (for per module setting) or `@on_broken_contract` (per function) to `:raise` or
 `:error_tuple` you can choose how broken contracts are reported. When `:error_tuple` setting is used, function with a
 broken contract will return `{:error, :contract_precondition_not_met}` or `{:error, :contract_postcondition_not_met}`.
 
